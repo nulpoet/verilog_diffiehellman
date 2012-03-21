@@ -51,13 +51,13 @@ module modular_exp_tb;
 		clk = 0;
 		rst = 0;
 		base = 5;
-		exp = 29;
+		exp = 22;
 		prime = 23;
 		
 		// Wait 100 ns for global reset to finish
 		#100
 		rst = 1;
-		#100
+		#20
 		rst = 0;
 		// Add stimulus here
 	end

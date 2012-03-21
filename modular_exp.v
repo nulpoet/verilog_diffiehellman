@@ -38,32 +38,40 @@ module modular_exp(
 			buffer = 0;
 			buffer[99:0] = base;
 			exp_buf = 1;
-			result = 0;
-			$display("buffer after reset : %b", buffer);
+			result = 1;
+			$display("buffer after reset : %d", buffer);
 		end
 		else begin
 			if(dirty) begin
 				if ((exp_buf<<1) > exp) begin
-					result = result + buffer;
+					$display("exp_buf= %d*2=%d > exp= %d", exp_buf, exp_buf<<1, exp);
+					result = (result * buffer) % prime;
 					
 					buffer = 0;
 					buffer[99:0] = base;
 					exp = exp - exp_buf;
 					exp_buf = 1;
+					$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
 				end
-				else begin
-					exp_buf = exp_buf << 1;
+				
+				if(exp_buf == exp) begin
+					result = (result * buffer) % prime;
+					dirty = 0;
+					$display("final result : %d", result);
 				end
 				
 				buffer = buffer*buffer;
 				if(buffer >= prime) begin
-					buffer = buffer - prime;
+					$display("buffer = %d  excceeded prime = %d", buffer, prime);
+					//buffer = buffer - prime;
+					buffer = buffer % prime;
+					$display("new buffer after modding = %d", buffer);
 				end
-				
-				if(exp_buf == exp) begin
-					result = result + buffer;
-					dirty = 0;
-				end			
+				else
+					$display("new buffer = %d", buffer);
+
+				exp_buf = exp_buf << 1;
+				$display("exp_buf = %d", exp_buf);				
 			end
 		end
 	end
