@@ -51,7 +51,7 @@ module modular_exp_tb;
 		clk = 0;
 		rst = 0;
 		base = 5;
-		exp = 22;
+		exp = 23;
 		prime = 23;
 		
 		// Wait 100 ns for global reset to finish
