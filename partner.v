@@ -26,247 +26,148 @@ module partner(
 	input [99:0] pub_key_in,
 	input [2:0] ctrl,
 	input [2:0] partner_no,
-	output reg dirty
-	/*input [6-1:0] feed,
-   input out_other,
-	input [2:0] ctrl,
-	input [2:0] partner_no,
-	output out,
-	output [2-1:0] deltas,
-	output reg dirty */
-    );
-
-
-/*
-parameter K = 2;
-parameter N = 3;
-parameter L = 2;
-parameter miunus_L = -2;
-parameter L_plus_1 = 3;
-parameter miunus_L_plus_1 = -3;
-parameter W_WIDTH = 13;
-
-integer ii, jj, kk;
-
-reg w [0:(K*N-1)][0:12];
-reg [K-1:0] d;
-reg myout;
-
-reg [2:0] prev_ctrl;
-
-reg [K*N-1:0] state; // Ideally should of length ceiling(K*N-1)
-reg [K*N-1:0] state_K; // Ideally should of length ceiling(K*N-1)
-reg [K*N-1:0] state_N; // Ideally should of length ceiling(K*N-1)
-reg signed [12:0] temp_wi;
-
-wire lfsr_done;
-wire [12:0] lfsr_val;
-lfsr uut_lfsr  (
-		.clk(clk), 
-		.rst(rst),
-		.seed_no(partner_no),
-		.lfsr_done(lfsr_done),
-		.lfsr(lfsr_val)
-	);
-
-reg signed [12:0] acc_feed;
-reg signed [12:0] acc_value;
-*/
-
-parameter LEN = 100;
-
-integer ii, jj, kk;
-
-reg [LEN-1:0] prime;
-reg [LEN-1:0] base;
-reg [2*LEN-1:0] secret;
-reg [99:0] my_pub_key,
-
-reg [99:0] exp_buf,
-
-reg [2:0] prev_ctrl;
-
-wire lfsr_done;
-wire [12:0] lfsr_val;
-lfsr uut_lfsr  (
-		.clk(clk),
-		.rst(rst),
-		.seed_no(partner_no),
-		.lfsr_done(lfsr_done),
-		.lfsr(lfsr_val)
-	);
-
-always @ (posedge clk or posedge rst) begin
-	if (rst) begin
-		prev_ctrl = 3'b000;
-		
-		prime = prime_in;
-		base = base_in;
-		sectret = 0;
-		$display("---- global reset at partner_no : %d  with   prime : %d | base : %d ----", partner_no, prime, base);
-	end
+	output reg [99:0] pub_key_my,
+	output reg dirty0,
+	output reg dirty1
+   );
 	
-	else begin
-		
-		if (ctrl[0] & ~prev_ctrl[0]) begin
-			//state = 0;
-			dirty = 1;
+	parameter LEN = 100;
+	integer ii, jj, kk;
+
+	reg state;
+
+	reg [LEN-1:0] prime;
+	reg [LEN-1:0] base;
+	reg [2*LEN-1:0] secret;
+	reg [99:0] common_key;
+	
+	reg [2:0] prev_ctrl;
+
+	wire lfsr_done;
+	wire [12:0] lfsr_val;
+	lfsr uut_lfsr  (
+			.clk(clk),
+			.rst(rst),
+			.seed_no(partner_no),
+			.lfsr_done(lfsr_done),
+			.lfsr(lfsr_val)
+		);
+
+	// Inputs
+	//reg clk;
+	reg start_exp;
+	reg [99:0] base_exp;
+	reg [99+1:0] exp;
+	//reg [99:0] prime;
+	 
+	// Outputs
+	wire [99:0] result_exp;
+	wire dirty0_exp;
+	wire dirty1_exp;
+
+	modular_exp uut_mod_exp (
+			.clk(clk),
+			.rst(start_exp),
+			.base(base_exp),
+			.exp_in(exp),
+			.prime(prime),
+			.result(result_exp),
+			.dirty0(dirty0_exp),
+			.dirty1(dirty1_exp)
+		);
+
+	always @ (posedge clk or posedge rst) begin
+		if (rst) begin
+			prev_ctrl = 3'b000;
 			
+			prime = prime_in;
+			base = base_in;
 			secret = 0;
-			secret[13:0] = lfsr_val[13:0];
-			my_pub_key = base;
-			exp_buf = 1;
-			$display("---- generate sectret key ----");
-		end
-		else if (ctrl[1] & ~prev_ctrl[1]) begin
-			if(ctrl != 3'b111) begin
-				state_N = 0;
-				state_K = 0;
-				dirty = 1;
-				acc_feed = 0;
-				acc_value = 0;
-				$display("---- compute reset----");
-			end
-		end
-		else if (ctrl[2] & ~prev_ctrl[2]) begin
-			if(ctrl != 3'b111) begin
-				state_N = 0;
-				state_K = 0;
-				dirty = 1;
-				$display("---- learn reset----");
-			end
+						
+			start_exp = 0;
+			$display("---- global reset at partner_no : %d  with   prime : %d | base : %d ----", partner_no, prime, base);
 		end
 		
-		//$display("ctrl : %b | prev_ctrl : %b   at partner_no : %d ", ctrl, prev_ctrl, partner_no);
-		prev_ctrl = ctrl;
-		
-	
-		if (ctrl == 3'b001) begin
-			if (dirty) begin
-				temp_wi = lfsr_val[12:0] % (L_plus_1);
-				if (~lfsr_val[3]) begin
-					temp_wi = temp_wi * -1;
-				end
-
-				for(ii=0; ii<W_WIDTH; ii=ii+1) begin
-					w[state][ii] = temp_wi[ii];
-				end
-
-				$display("state : %d", state);
-				$display("temp_wi : %d", temp_wi);
-				//$display("temp_wi bits : %b", temp_wi);
-				$display("lfsr_val : %d", lfsr_val);
-				$display("-------------");
-
-				state = (state + 1);
-				if (state == K*N)
-					dirty = 0;
+		else begin
+			//$display("{%d} : clk tick", partner_no);
+			if (ctrl[0] & ~prev_ctrl[0]) begin
+				state = 0;
+				dirty0 = 1;			
+				$display("---- generate sectret key reset----");
 			end
-		end
-		
-		else if (ctrl == 3'b010) begin // compute
-			if (dirty) begin
-				for(ii=0; ii<W_WIDTH; ii=ii+1) begin
-					acc_feed[ii] = w[state_K*N + state_N][ii];
-				end
-				
-				if(feed[state_K*N + state_N])
-					acc_value = acc_value + acc_feed;
-				else
-					acc_value = acc_value - acc_feed;
-				
-				//$display("acc_feed : %b, acc_value : %b, add/sub : %b, state_K*N + state_N : %d", acc_feed, acc_value, feed[state_K*N + state_N], (state_K*N+state_N));
-				
-				state_N = state_N + 1;
-				
-				if (state_N == N) begin
-					$display("[%d] for d[%d] acc_value = %d", partner_no, state_K, acc_value);
-					// bit 0 maps to  1 &
-					// bit 1 maps to -1
-					// xoring 0 keeps parity same.. similar to multiplication of 1 with (1 or 0)
-					if (acc_value[12] == 0)
-						d[state_K] = 1'b0;
-					else
-						d[state_K] = 1'b1;
-					$display("[%d] d[%d] = %b", partner_no, state_K, d[state_K]);
-					state_N = 0;
-					acc_value = 0;
-					
-					state_K = state_K + 1;
-					if (state_K == K) begin
-						myout = d[0];
-						for(ii=1; ii<K; ii=ii+1) begin
-							if (myout)
-							myout = myout ^ d[ii];
-						end
-						//$display("[%d] d = %b", partner_no, d[0]);
-						dirty = 0;
+			else if (ctrl[1] & ~prev_ctrl[1]) begin
+				state = 0;
+				dirty1 = 1;			
+				$display("---- generate common key reset----");
+			end
+			
+			//$display("ctrl : %b | prev_ctrl : %b   at partner_no : %d ", ctrl, prev_ctrl, partner_no);
+			prev_ctrl = ctrl;
+			
+			if (ctrl == 3'b001) begin // generate secret key
+				if(dirty0) begin
+					$display("{%d} computing secret & public key  with state = %d", partner_no, state);
+					if(state == 0) begin
+						secret = 0;
+						secret[12:0] = lfsr_val[12:0];
+						exp = secret;
+						base_exp = base;
+						
+						start_exp = 1;
+						$display("{%d} secret key : %d", partner_no, secret);
+						$display("{%d} Started exp", partner_no);
+						state = 1;					
+					end 
+					else if(state == 1) begin
+						start_exp = 0;
+						//$display("{%d} Stopped exp", partner_no);
+						if (dirty0_exp == 0) begin
+							pub_key_my = result_exp;
+							$display("************* {%d} pub_key_my = %d", partner_no, pub_key_my);
+							dirty0 = 0;
+							state = 0;
+						end					
+					end 
+					else begin
+						$display("Impossiblr case... something is broken !");
 					end
 				end
 			end
-		end
-		
-		else if (ctrl == 3'b100) begin // learn
-			if (myout == out_other) begin
-				$display("[%d] w : ", partner_no);
-				for(ii=0; ii<K; ii=ii+1) begin
-					$display("[%d] d[%d] = %d, myoutput : %d", partner_no, ii, d[ii], myout);
-					if (d[ii] == myout) begin
-						for(jj=0; jj<N; jj=jj+1) begin
-							for (kk=0; kk<W_WIDTH; kk=kk+1) begin
-								temp_wi[kk] = w[ii*N+jj][kk];
-							end
-							//$display("[%d]  w[%d][%d] from %d", partner_no, ii, jj, temp_wi);
-							$display("%d", temp_wi);
-							if (feed[ii*N+jj])
-								temp_wi = temp_wi + 1;
-							else
-								temp_wi = temp_wi - 1;
-							
-							//$display("... %b", temp_wi);
-							if (temp_wi[12] == 1) begin
-								//$display("-- miunus_L_plus_1 : %d", miunus_L_plus_1);
-								if (temp_wi == miunus_L_plus_1)
-									temp_wi = miunus_L;
-							end
-							else begin
-								//$display("++ L_plus_1 : %d", L_plus_1);
-								if (temp_wi == L_plus_1)
-									temp_wi = L;
-							end
-							
-							//$display("...to %d given feed[%d] : %d", temp_wi, ii*N+jj, feed[ii*N+jj]);
-							$display("%d [%d]", temp_wi, feed[ii*N+jj]);
-							for (kk=0; kk<W_WIDTH; kk=kk+1) begin
-								w[ii*N+jj][kk] = temp_wi[kk];
-							end
-						end
+			
+			else if (ctrl == 3'b010) begin // generate common key
+				if (dirty1) begin
+					if(state == 0) begin
+						exp = secret;
+						base_exp = pub_key_in;
+						
+						start_exp = 1;				
+						$display("{%d} state 0 Started exp", partner_no);
+						state = 1;
+					end 					
+					else if(state == 1) begin
+						start_exp = 0;
+						$display("{%d} state 2 Stopped exp", partner_no);
+						if (dirty1_exp == 0) begin
+							common_key = result_exp;
+							$display("*************** {%d} common_key : %d", partner_no, common_key);
+							dirty1 = 0;
+							state = 0;
+						end					
+					end 
+					else begin
+						$display("Impossiblr case... something is broken !");
 					end
 				end
-			end
-			else
-				$display("no learning");
-		end
-		
-		else if (ctrl == 3'b111) begin
-			$display("---- Synced at partner_no %d----", partner_no);
-			for (ii=0; ii<K; ii=ii+1) begin
-				for (jj=0; jj<N; jj=jj+1) begin
-					for (kk=0; kk<W_WIDTH; kk=kk+1) begin
-						temp_wi[kk] = w[ii*N+jj][kk];
-					end
-					$display("%d", temp_wi);
-				end
+			end 
+			
+			else if (ctrl == 3'b000) begin
+				$display("NO-OP");
+			end 
+			
+			else begin
+				$display("Impossible case.. Something is broken !");
 			end
 		end
-		
-		else
-			; // impossible case
 	end
-end
-
-assign out = myout;
-//assign weights = w;
-assign deltas = d;
 
 endmodule

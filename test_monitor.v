@@ -29,16 +29,17 @@ module monitor_test;
 	reg clk;
 	
 	wire synced;
-	wire [31:0] sync_count;
+	/*wire [31:0] sync_count;
 	wire [63:0] iter_count;
+	*/
 
 	// Instantiate the Unit Under Test (UUT)
 	monitor uut_monitor (
 		.clk(clk),
 		.rst(rst),
-		.synced(synced),
+		.synced(synced)/*,
 		.sync_count(sync_count),
-		.iter_count(iter_count)
+		.iter_count(iter_count)*/
 	);
 
 

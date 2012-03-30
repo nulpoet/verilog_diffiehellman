@@ -24,6 +24,8 @@
 
 module modular_exp_tb;
 
+	//reg [2:0] state;
+
 	// Inputs
 	reg clk;
 	reg rst;
@@ -33,7 +35,8 @@ module modular_exp_tb;
 	 
 	// Outputs
 	wire [99:0] result;
-	wire dirty;
+	wire dirty0;
+	wire dirty1;
 
 	// Instantiate the Unit Under Test (UUT)
 	modular_exp uut (
@@ -43,7 +46,8 @@ module modular_exp_tb;
 		.exp_in(exp),
 		.prime(prime),
 		.result(result),
-		.dirty(dirty)
+		.dirty0(dirty0),
+		.dirty1(dirty1)
 	);
 
 	initial begin
@@ -54,16 +58,38 @@ module modular_exp_tb;
 		exp = 23;
 		prime = 23;
 		
+		//state = 0;
+		
 		// Wait 100 ns for global reset to finish
 		#100
 		rst = 1;
-		#20
+		#10
 		rst = 0;
+		
+		#100
+		rst = 1;
+		#10
+		rst = 0;
+		//state = 1;
 		// Add stimulus here
 	end
 	
 	always begin
 	  #5 clk = ~clk; // Toggle clock every 5 ticks
 	end
+	
+	/*
+	always begin
+		if(state == 1) begin
+			#20
+			rst = 1;
+			#10
+			rst = 0;
+			if(~dirty) begin
+				$display("done with 2nd computaion");
+			end
+		end
+	end
+	*/
 endmodule
 
