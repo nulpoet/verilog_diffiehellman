@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date:    13:25:43 03/21/2012 
+// Create Date:    11:22:13 04/11/2012 
 // Design Name: 
-// Module Name:    modular_exp 
+// Module Name:    modular_exp_async 
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
@@ -18,9 +18,11 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
-module modular_exp(
-    input clk,
+
+module modular_exp_async(
     input rst,
+	 input clk,
+	 input start,
     input [99:0] base,
     input [99+1:0] exp_in,
     input [99:0] prime,
@@ -57,17 +59,17 @@ module modular_exp(
 		.ready(div_ready), 
 		.dividend(dividend), 
 		.divider(divider), 
-		.start(start), 
+		.start(div_start), 
 		.clk(clk),
 		.rst(rst)
 	);
 
 	
-	always @ (posedge clk /*or posedge rst*/) begin
-		//$display("{exp} rst : %d ............", rst);
-		if (rst) begin
-			div_start = 0;
+	always @ (posedge start) begin
+		
+		if (start) begin
 			//$display("{exp} reseting ............");
+			
 			if (state == 0)
 				state = 1;
 			else
@@ -79,6 +81,7 @@ module modular_exp(
 			else
 				dirty0 = 1;
 			dirty = 1;
+			
 			
 			exp = exp_in;
 			buffer = 0;
@@ -93,60 +96,73 @@ module modular_exp(
 				buffer[99:0] = base;
 			end
 			// $display("buffer after reset : %d", buffer);
-		end
-		else begin
-			//$display("non reset ...............");
-			/*if (div_start)
-				div_start = 0;
-				*/
-			if(dirty) begin
-				//if(div_ready) begin
-					//$display("{exp} dirty true");
-					if ((exp_buf<<1) > exp) begin					
-						//result = (result * buffer) % prime;
-						result = (result * buffer);
-						
-						buffer = 0;
-						exp = exp - exp_buf;
-						
-						if( exp == 0 ) begin
-							exp_buf = 0;
-							buffer[99:0] = 1;
-						end
-						else begin
-							exp_buf = 1;
-							buffer[99:0] = base;
-						end
-						//$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
-					end
+			
+			
+			
+			while(dirty) begin
+				if ((exp_buf<<1) > exp) begin
+					//result = (result * buffer) % prime;
+					dividend = (result * buffer);
+					divisor = prime;
+					div_start = 1;
+					while(div_ready == 0);
+					div_start = 0;
+					result = remainder;
 					
-					if(exp_buf == exp) begin
-						//result = (result * buffer) % prime;
-						result = (result * buffer);
-						$display("final result : %d", result);
-						dirty = 0;
-						if (state)
-							dirty1 = 0;
-						else
-							dirty0 = 0;
+					buffer = 0;
+					exp = exp - exp_buf;
+					
+					if( exp == 0 ) begin
+						exp_buf = 0;
+						buffer[99:0] = 1;
 					end
 					else begin
-						buffer = buffer*buffer;
-						if(buffer >= prime) begin
-							//$display("buffer = %d  excceeded prime = %d", buffer, prime);						
-							
-							//buffer = buffer % prime;
-							
-							//$display("new buffer after modding = %d", buffer);
-						end
-						/*else
-							$display("new buffer = %d", buffer);
-						*/
-
-						exp_buf = exp_buf << 1;
-						//$display("exp_buf = %d", exp_buf);
+						exp_buf = 1;
+						buffer[99:0] = base;
 					end
-				//end
+					//$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
+				end
+				
+				
+				if(exp_buf == exp) begin
+					//result = (result * buffer) % prime;
+					dividend = (result * buffer);
+					divisor = prime;
+					div_start = 1;
+					while(div_ready == 0);
+					div_start = 0;
+					result = remainder;
+					$display("final result : %d", result);
+					
+					dirty = 0;
+					if (state)
+						dirty1 = 0;
+					else
+						dirty0 = 0;
+				end
+				
+				else begin
+					buffer = buffer*buffer;
+					if(buffer >= prime) begin
+						//$display("buffer = %d  excceeded prime = %d", buffer, prime);						
+						
+						//buffer = buffer % prime;
+						dividend = buffer;
+						divisor = prime;
+						div_start = 1;
+						while(div_ready == 0);
+						div_start = 0;
+						buffer = remainder;
+						
+						//$display("new buffer after modding = %d", buffer);
+					end
+					/*else
+						$display("new buffer = %d", buffer);
+					*/
+
+					exp_buf = exp_buf << 1;
+					//$display("exp_buf = %d", exp_buf);
+				end
 			end
 		end
 	end
