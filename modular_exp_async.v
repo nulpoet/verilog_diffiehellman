@@ -28,14 +28,13 @@ module modular_exp_async(
     input [99:0] prime,
     output reg [99:0] result,
 	 output reg dirty0,
-	 output reg dirty1
+	 output reg dirty1,
+	 output div_ready_out
     );
 
 
 	reg state;
 	reg dirty;
-	
-	reg pre_rst;
 	
 	reg [199:0] buffer;
 	reg [99+1:0] exp;
@@ -52,8 +51,10 @@ module modular_exp_async(
 	wire [15:0] remainder;
 	wire div_ready;
 
+	assign div_ready_out = div_ready;
+
 	// Instantiate the Unit Under Test (UUT)
-	divider uut (
+	divider_async uut (
 		.quotient(quotient), 
 		.remainder(remainder), 
 		.ready(div_ready), 
@@ -68,7 +69,7 @@ module modular_exp_async(
 	always @ (posedge start) begin
 		
 		if (start) begin
-			//$display("{exp} reseting ............");
+			$display("{exp} starting ............");
 			
 			if (state == 0)
 				state = 1;
@@ -103,9 +104,10 @@ module modular_exp_async(
 				if ((exp_buf<<1) > exp) begin
 					//result = (result * buffer) % prime;
 					dividend = (result * buffer);
-					divisor = prime;
+					divider = prime;
 					div_start = 1;
-					while(div_ready == 0);
+					while(div_ready == 0) begin					
+					end
 					div_start = 0;
 					result = remainder;
 					
@@ -120,16 +122,17 @@ module modular_exp_async(
 						exp_buf = 1;
 						buffer[99:0] = base;
 					end
-					//$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
+					$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
 				end
 				
 				
 				if(exp_buf == exp) begin
 					//result = (result * buffer) % prime;
 					dividend = (result * buffer);
-					divisor = prime;
+					divider = prime;
 					div_start = 1;
-					while(div_ready == 0);
+					while(div_ready == 0) begin					
+					end
 					div_start = 0;
 					result = remainder;
 					$display("final result : %d", result);
@@ -144,26 +147,28 @@ module modular_exp_async(
 				else begin
 					buffer = buffer*buffer;
 					if(buffer >= prime) begin
-						//$display("buffer = %d  excceeded prime = %d", buffer, prime);						
+						$display("buffer = %d  excceeded prime = %d", buffer, prime);						
 						
 						//buffer = buffer % prime;
 						dividend = buffer;
-						divisor = prime;
+						divider = prime;
 						div_start = 1;
-						while(div_ready == 0);
+						while(div_ready == 0) begin					
+						end
 						div_start = 0;
 						buffer = remainder;
 						
-						//$display("new buffer after modding = %d", buffer);
+						$display("new buffer after modding = %d", buffer);
 					end
 					/*else
 						$display("new buffer = %d", buffer);
 					*/
 
 					exp_buf = exp_buf << 1;
-					//$display("exp_buf = %d", exp_buf);
+					$display("exp_buf = %d", exp_buf);
 				end
-			end
+			end // while ends
+			
 		end
 	end
 endmodule
