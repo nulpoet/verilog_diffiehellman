@@ -73,10 +73,12 @@ module modular_exp_async_tb;
 		#10
 		start = 0;
 		
+		/*
 		#300
 		start = 1;
 		#10
 		start = 0;
+		*/
 	end
 	
 	always begin

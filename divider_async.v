@@ -50,7 +50,7 @@ module divider_async(quotient,remainder,ready,dividend,divider,start,clk,rst);
    always @(posedge clk or negedge clk or posedge rst or posedge start or negedge start) begin			
 		if (rst) begin
 			$display("Divider initial reset");
-			ready = 0;
+			ready = 1;
 			pre_clk = 0;
 			pre_start = 0;
 		end
@@ -72,8 +72,8 @@ module divider_async(quotient,remainder,ready,dividend,divider,start,clk,rst);
 			
 		   if(clk == !pre_clk) begin
 				if(clk) begin
-					$display(".....clk ticks..... with  start = %d", start);
-					ready = 0;
+					//$display(".....clk ticks..... with  start = %d", start);
+					//ready = 0;
 					if (start==1 && bitc!=0) begin
 						$display("Divider iterating at %d", bitc);
 						diff = dividend_copy - divider_copy;

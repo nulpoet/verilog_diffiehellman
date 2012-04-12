@@ -36,6 +36,8 @@ module modular_exp_async(
 	reg state;
 	reg dirty;
 	
+	reg [3:0] div_state;
+	
 	reg [199:0] buffer;
 	reg [99+1:0] exp;
 	reg [99+1:0] exp_buf;
@@ -45,6 +47,7 @@ module modular_exp_async(
 	reg [15:0] dividend;
 	reg [15:0] divider;
 	reg div_start;
+	reg pre_start;
 	
 	// Outputs
 	wire [15:0] quotient;
@@ -66,54 +69,33 @@ module modular_exp_async(
 	);
 
 	
-	always @ (posedge start) begin
-		
-		if (start) begin
-			$display("{exp} starting ............");
-			
-			if (state == 0)
-				state = 1;
-			else
-				state = 0;
-			$display("{exp} state = %d", state);
-			
-			if (state)
-				dirty1 = 1;
-			else
-				dirty0 = 1;
-			dirty = 1;
-			
-			
-			exp = exp_in;
-			buffer = 0;
-			result = 1;
-			$display("{exp} reseting with exp=%d, exp_in=%d, base=%d, prime=%d, result=%d, dirty0=%d, dirty1=%d", exp, exp_in, base, prime, result, dirty0, dirty1);
-			if( exp == 0 ) begin
-				exp_buf = 0;
-				buffer[99:0] = 1;
-			end
-			else begin
-				exp_buf = 1;
-				buffer[99:0] = base;
-			end
-			// $display("buffer after reset : %d", buffer);
-			
-			
-			
-			while(dirty) begin
-				if ((exp_buf<<1) > exp) begin
-					//result = (result * buffer) % prime;
-					dividend = (result * buffer);
-					divider = prime;
-					div_start = 1;
-					while(div_ready == 0) begin					
-					end
-					div_start = 0;
-					result = remainder;
+	always @ (posedge rst or posedge start or negedge start or posedge clk) begin
+		if (rst) begin
+			$display("{exp} resetting....");
+			pre_start = 0;
+		end
+		else begin
+			if (start == !pre_start) begin
+				if (start) begin
+					$display("{exp} starting ....**************");
 					
+					if (state == 0)
+						state = 1;
+					else
+						state = 0;
+					$display("{exp} state = %d", state);
+					
+					if (state)
+						dirty1 = 1;
+					else
+						dirty0 = 1;
+					dirty = 1;
+					
+					
+					exp = exp_in;
 					buffer = 0;
-					exp = exp - exp_buf;
-					
+					result = 1;
+					$display("{exp} reseting with exp=%d, exp_in=%d, base=%d, prime=%d, result=%d, dirty0=%d, dirty1=%d", exp, exp_in, base, prime, result, dirty0, dirty1);
 					if( exp == 0 ) begin
 						exp_buf = 0;
 						buffer[99:0] = 1;
@@ -122,53 +104,119 @@ module modular_exp_async(
 						exp_buf = 1;
 						buffer[99:0] = base;
 					end
-					$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
+					// $display("buffer after reset : %d", buffer);
+					div_state = 0;
 				end
+				else
+					$display("{exp} start negedge");
 				
-				
-				if(exp_buf == exp) begin
-					//result = (result * buffer) % prime;
-					dividend = (result * buffer);
-					divider = prime;
-					div_start = 1;
-					while(div_ready == 0) begin					
-					end
-					div_start = 0;
-					result = remainder;
-					$display("final result : %d", result);
+				pre_start = start;
+			end
+			
+			if(clk) begin
+				if(dirty && div_ready) begin
 					
-					dirty = 0;
-					if (state)
-						dirty1 = 0;
-					else
-						dirty0 = 0;
-				end
-				
-				else begin
-					buffer = buffer*buffer;
-					if(buffer >= prime) begin
-						$display("buffer = %d  excceeded prime = %d", buffer, prime);						
-						
-						//buffer = buffer % prime;
-						dividend = buffer;
-						divider = prime;
-						div_start = 1;
-						while(div_ready == 0) begin					
+					if(div_state == 0) begin
+						if ((exp_buf<<1) > exp) begin
+							//result = (result * buffer) % prime;
+							dividend = (result * buffer);
+							divider = prime;
+							div_start = 1;
+							div_state = 1;
 						end
-						div_start = 0;
-						buffer = remainder;
-						
-						$display("new buffer after modding = %d", buffer);
+						else
+							div_state = 2;
 					end
-					/*else
-						$display("new buffer = %d", buffer);
-					*/
+					//		while(div_ready == 0) begin
+					//		end
+					else if(div_state == 1) begin
+							div_start = 0;
+							result = remainder;
+							
+							buffer = 0;
+							exp = exp - exp_buf;
+							
+							if( exp == 0 ) begin
+								exp_buf = 0;
+								buffer[99:0] = 1;
+							end
+							else begin
+								exp_buf = 1;
+								buffer[99:0] = base;
+							end
+							$display("new exp = %d,  exp_buf = %d, result : %d", exp, exp_buf, result);
+						//end
+						div_state = 2;
+					end
+						
+					else if(div_state == 2) begin
+						if(exp_buf == exp) begin
+							//result = (result * buffer) % prime;
+							dividend = (result * buffer);
+							divider = prime;
+							div_start = 1;
+							div_state = 3;
+						end
+						else
+							div_state = 4;
+					end
+					//		while(div_ready == 0) begin					
+					//		end
+					else if(div_state == 3) begin
+							div_start = 0;
+							result = remainder;
+							$display("final result : %d", result);
+							
+							dirty = 0;
+							if (div_state)
+								dirty1 = 0;
+							else
+								dirty0 = 0;
+						//end
+						div_state = 0;
+					end
+						
+						//else begin
+					else if(div_state == 4) begin
+							buffer = buffer*buffer;
+							if(buffer >= prime) begin
+								$display("buffer = %d  excceeded prime = %d", buffer, prime);
+								
+								//buffer = buffer % prime;
+								dividend = buffer;
+								divider = prime;
+								div_start = 1;
+								div_state = 5;
+							end
+							else 
+								div_state = 6;
+					end
+								
+					else if(div_state == 5) begin
+							//	while(div_ready == 0) begin					
+							//	end
+								div_start = 0;
+								buffer = remainder;
+								
+								$display("new buffer after modding = %d", buffer);
+							//end
+							div_state = 6;
+					end
+					
+					else if(div_state == 6) begin
+							/*else
+								$display("new buffer = %d", buffer);
+							*/
 
-					exp_buf = exp_buf << 1;
-					$display("exp_buf = %d", exp_buf);
-				end
-			end // while ends
+							exp_buf = exp_buf << 1;
+							$display("exp_buf = %d", exp_buf);
+						//end
+						div_state = 0;
+					end
+				end // if(dirty) ends			
+			end
 			
 		end
+		
 	end
 endmodule
