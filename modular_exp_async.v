@@ -35,7 +35,7 @@ module modular_exp_async(
 	reg state;
 	reg dirty;
 	
-	reg [3:0] div_state;
+	reg [7:0] div_state;
 	
 	reg [199:0] buffer;
 	reg [99+1:0] exp;
@@ -68,7 +68,7 @@ module modular_exp_async(
 	);
 
 	
-	always @ (posedge rst or posedge start or negedge start or posedge clk) begin
+	always @ (posedge rst or posedge clk) begin
 		if (rst) begin
 			$display("{exp} resetting....");
 			pre_start = 0;
@@ -112,23 +112,30 @@ module modular_exp_async(
 				pre_start = start;
 			end
 			
-			if(clk) begin
+			if(clk) begin // this if condition is unnecessary
 				if(dirty && div_ready) begin
 					
 					if(div_state == 0) begin
+						$display("div_state = %d -----------------------", div_state);
 						if ((exp_buf<<1) > exp) begin
 							//result = (result * buffer) % prime;
+							$display("exp_buf = %d overshot prime", exp_buf);
 							dividend = (result * buffer);
 							divider = prime;
 							div_start = 1;
-							div_state = 1;
+							div_state = 11;
 						end
 						else
 							div_state = 2;
 					end
 					//		while(div_ready == 0) begin
 					//		end
+					else if(div_state == 11) begin
+						$display("div_state = %d -----------------------", div_state);
+						div_state = 1;
+					end
 					else if(div_state == 1) begin
+						$display("div_state = %d -----------------------", div_state);
 							div_start = 0;
 							result = remainder;
 							
@@ -149,19 +156,25 @@ module modular_exp_async(
 					end
 						
 					else if(div_state == 2) begin
+						$display("div_state = %d -----------------------", div_state);
 						if(exp_buf == exp) begin
 							//result = (result * buffer) % prime;
 							dividend = (result * buffer);
 							divider = prime;
 							div_start = 1;
-							div_state = 3;
+							div_state = 33;
 						end
 						else
 							div_state = 4;
 					end
 					//		while(div_ready == 0) begin					
 					//		end
+					else if(div_state == 33) begin
+						$display("div_state = %d -----------------------", div_state);
+						div_state = 3;						
+					end
 					else if(div_state == 3) begin
+						$display("div_state = %d -----------------------", div_state);
 							div_start = 0;
 							result = remainder;
 							$display("final result : %d", result);
@@ -177,6 +190,7 @@ module modular_exp_async(
 						
 						//else begin
 					else if(div_state == 4) begin
+						$display("div_state = %d -----------------------", div_state);
 							buffer = buffer*buffer;
 							if(buffer >= prime) begin
 								$display("buffer = %d  excceeded prime = %d", buffer, prime);
@@ -185,13 +199,17 @@ module modular_exp_async(
 								dividend = buffer;
 								divider = prime;
 								div_start = 1;
-								div_state = 5;
+								div_state = 55;
 							end
 							else 
 								div_state = 6;
 					end
-								
+					else if(div_state == 55) begin
+						$display("div_state = %d -----------------------", div_state);
+						div_state = 5;						
+					end
 					else if(div_state == 5) begin
+							$display("div_state = %d -----------------------", div_state);
 							//	while(div_ready == 0) begin					
 							//	end
 								div_start = 0;
@@ -203,6 +221,7 @@ module modular_exp_async(
 					end
 					
 					else if(div_state == 6) begin
+						$display("div_state = %d -----------------------", div_state);
 							/*else
 								$display("new buffer = %d", buffer);
 							*/
