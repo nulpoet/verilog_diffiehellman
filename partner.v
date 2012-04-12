@@ -65,9 +65,10 @@ module partner(
 	wire dirty0_exp;
 	wire dirty1_exp;
 
-	modular_exp uut_mod_exp (
+	modular_exp_async uut_mod_exp (
+			.rst(rst),
 			.clk(clk),
-			.rst(start_exp),
+			.start(start_exp),
 			.base(base_exp),
 			.exp_in(exp),
 			.prime(prime),
@@ -106,7 +107,7 @@ module partner(
 			
 			if (ctrl == 3'b001) begin // generate secret key
 				if(dirty0) begin
-					$display("{%d} computing secret & public key  with state = %d", partner_no, state);
+					//$display("{%d} computing secret & public key  with state = %d", partner_no, state);
 					if(state == 0) begin
 						secret = 0;
 						secret[12:0] = lfsr_val[12:0];
@@ -141,12 +142,12 @@ module partner(
 						base_exp = pub_key_in;
 						
 						start_exp = 1;				
-						$display("{%d} state 0 Started exp", partner_no);
+						$display("{%d} state 0 Started exp for common key", partner_no);
 						state = 1;
 					end 					
 					else if(state == 1) begin
 						start_exp = 0;
-						$display("{%d} state 2 Stopped exp", partner_no);
+						//$display("{%d} state 2 Stopped exp", partner_no);
 						if (dirty1_exp == 0) begin
 							common_key = result_exp;
 							$display("*************** {%d} common_key : %d", partner_no, common_key);

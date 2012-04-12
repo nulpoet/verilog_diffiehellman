@@ -36,7 +36,6 @@ module modular_exp_async_tb;
 	wire [99:0] result;
 	wire dirty0;
 	wire dirty1;
-	wire div_ready_out;
 
 	// Instantiate the Unit Under Test (UUT)
 	modular_exp_async uut (
@@ -48,8 +47,7 @@ module modular_exp_async_tb;
 		.prime(prime), 
 		.result(result), 
 		.dirty0(dirty0), 
-		.dirty1(dirty1),
-		.div_ready_out(div_ready_out)
+		.dirty1(dirty1)
 	);
 
 	initial begin
@@ -73,12 +71,12 @@ module modular_exp_async_tb;
 		#10
 		start = 0;
 		
-		/*
-		#300
+		
+		#3000
 		start = 1;
 		#10
 		start = 0;
-		*/
+		
 	end
 	
 	always begin

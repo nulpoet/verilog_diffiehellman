@@ -72,10 +72,9 @@ module divider_async(quotient,remainder,ready,dividend,divider,start,clk,rst);
 			
 		   if(clk == !pre_clk) begin
 				if(clk) begin
-					//$display(".....clk ticks..... with  start = %d", start);
-					//ready = 0;
+					//$display(".....clk ticks..... with  start = %d", start);					
 					if (start==1 && bitc!=0) begin
-						$display("Divider iterating at %d", bitc);
+						//$display("Divider iterating at %d", bitc);
 						diff = dividend_copy - divider_copy;
 
 						quotient = quotient << 1;

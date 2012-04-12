@@ -28,8 +28,7 @@ module modular_exp_async(
     input [99:0] prime,
     output reg [99:0] result,
 	 output reg dirty0,
-	 output reg dirty1,
-	 output div_ready_out
+	 output reg dirty1
     );
 
 
@@ -168,7 +167,7 @@ module modular_exp_async(
 							$display("final result : %d", result);
 							
 							dirty = 0;
-							if (div_state)
+							if (state)
 								dirty1 = 0;
 							else
 								dirty0 = 0;
